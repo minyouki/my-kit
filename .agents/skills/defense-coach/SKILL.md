@@ -1,67 +1,35 @@
 ---
-name: ui-verify
-description: Verify a running web application's rendered UI using Playwright screenshots, critical user-flow assertions, and browser error checks. Use after UI implementation or changes; not for data-only tasks or general server setup.
+name: defense-coach
+description: Generate mock follow-up questions from the actual implementation, let the user answer first, then check the answers against code, tests, and logs. Use after core features are done or before submission; read-only.
 ---
 
-# UI Verify
+# Defense Coach
 
 ## Goal
-Verify that the **actual running application** renders correctly and meets relevant UI acceptance criteria. A screenshot alone does not prove functional correctness. Prefer focused, repeatable checks over large test suites.
+Help the user explain **their own submission** with evidence. Follow-up questions are likely to be generated from the submitted work, so questions must come from the real code, not generic theory. This skill is read-only: do not edit code, tests, or docs, and do not run tests unless the user asks.
 
-## 1. Select scope and evidence
-1. Prioritize the official task README and root `AGENTS.md`.
-2. Read only relevant requirements (`R-ID`) in `docs/PLAN.md` and status (`T-ID`) in `docs/PROGRESS.md`, if present.
-3. Identify the target route, expected page state, critical user interaction, and applicable error/empty state.
-4. Never invent UI requirements, URLs, credentials, outcomes, or file paths.
+## 1. Gather facts
+1. Read the task statement, `docs/PLAN.md`, `docs/PROGRESS.md`, `docs/DEFENSE.md`, and the actual source layout.
+2. Note what is implemented, what is assumed, and what is not implemented. Do not invent files, functions, or behavior. If something cannot be confirmed in the code, say so.
 
-## 2. Inspect the runtime
-1. Detect the existing framework, test runner, Playwright availability, browser binaries, and actual server address/port.
-2. Prefer **already installed** Playwright packages, browsers, tests, and configuration.
-3. If the server is not running, use the **documented existing startup command** only if permitted. Keep the server running in its own terminal; do not build a separate server-management system.
-4. Before a new dependency, large browser download, or substantial configuration change, explain the cost and seek approval.
-5. If Playwright/browser execution is blocked, **do not bypass restrictions**. Use the permitted in-environment Browser preview and manual checks where feasible; explicitly mark Playwright screenshot verification **not completed**.
+## 2. Ask (3-6 questions, one at a time or as a short list)
+Choose from these types, always anchored to a real file, function, or decision in this project:
+1. **Consistency under concurrent change:** what if input data or settings change while a long operation is running or between steps? How is a stale result prevented from looking current? Compare with alternatives and the cost accepted.
+2. **Module and data flow:** walk through the whole flow from input to final output by module. Where is each piece of state stored and who owns it?
+3. **Rule verification:** how can one confirm the output obeys the task's rules? Which verification path exists, and which rules are only assumed or not checked?
+4. **Failure behavior:** invalid input, a check that fails after validation, a failure while saving. What happens to existing data and what the user sees?
+5. **Optimization limits:** where the solution uses heuristics or search limits, what breaks with much larger data or extreme parameters? What would be checked next, and on what evidence rather than AI explanation?
+6. **Incident timeline:** pick one real failure from PROGRESS. In order: what the AI first reported, what actually happened, which AI diagnosis or fix was accepted, corrected, or discarded, and the evidence for each judgment.
 
-## 3. Capture and verify the real page
-For each prioritized `R-ID` / `T-ID`:
-1. Open the **running app**, not a mock/static replacement, in a real Playwright browser session within the provided workspace.
-2. Wait for a meaningful page element or ready state using Playwright locators/auto-retrying assertions. Do not rely on fixed sleeps or `networkidle` alone.
-3. Capture a PNG **after the page has rendered**. For a flow with meaningful state change, also capture the post-interaction UI.
-4. Save to `artifacts/ui-verify/` unless the official task specifies another output directory. Use names like `R-01-main.png`, `R-02-after-submit.png`.
-5. Confirm screenshot files exist and are nonempty. If image inspection is supported, inspect for blank/clipped UI, obstructing overlays, and layout issues. If not, say **captured but not visually inspected**.
-6. Verify the critical flow using actual actions and assertions: visible content, navigation, form submission, and relevant error states. Inspect console/page errors and failed requests; distinguish intentional error tests from defects.
-7. Use existing test conventions. A snapshot comparison (`toHaveScreenshot`) is optional and is valid only with a trustworthy baseline in a comparable environment.
+Do not reveal suggested answers before the user answers.
 
-A minimal Playwright example (replace the placeholder with the **actual** requirement):
+## 3. Evaluate the answers
+After the user answers, compare against code, tests, and PROGRESS records. Mark each point as:
+- **Supported** (name the file, command, or test),
+- **Contradicted** (what the code actually does),
+- **Unverifiable** (not in code or logs; do not accept it as fact).
 
-```js
-await expect(page.getByRole('heading', { name: 'EXPECTED_TITLE' })).toBeVisible();
-await page.screenshot({ path: 'artifacts/ui-verify/R-01-main.png', fullPage: true });
-```
+Flag: answers that rely on "the AI said so", generic claims not tied to this project, invented files or behavior, and padding with unrelated achievements. Suggest one concrete thing to check or improve per weak answer.
 
-## 4. Diagnose and re-check failures
-1. Record **expected vs. observed** behavior and a reproducible check.
-2. Fix only within the approved scope. Ask before major architecture or requirement changes.
-3. Re-run the **same failing check**, plus a minimal related smoke test.
-4. Capture a new screenshot if the UI changed.
-5. Never weaken assertions, delete tests, or mark a failed requirement complete merely to produce a passing result.
-
-## 5. Record evidence with minimal documentation
-- Update `docs/PROGRESS.md` only for meaningful test, defect, fix, or re-verification events, using its existing structure.
-- Connect `R-ID` / `T-ID` to the **actual test command, result, screenshot path, remaining problem, and re-test outcome**.
-- Add important mechanisms or risks to `docs/DEFENSE.md` only when useful for understanding the submitted implementation.
-- Do not create extra management Markdown files or duplicate long logs.
-
-## 6. Safety, scope, and time
-- Use only permitted in-workspace tools and URLs. Never export screenshots/task data, Git Push, or bypass exam restrictions.
-- Do not capture passwords, API keys, private data, or other secrets; use safe test fixtures.
-- Do not overwrite the official README or alter required submission structure to accommodate testing.
-- Prioritize **one rendered screenshot + core user flow + significant failure state**. Expand only for required acceptance criteria or available time.
-- Distinguish **passed**, **failed**, **untested**, and **blocked**. A screenshot created without image inspection or a flow assertion is not a full UI pass.
-
-## Final report
-Report briefly:
-- `R-ID` / `T-ID` and tested route(s)
-- Executed command and browser/tool
-- Screenshot path(s)
-- Screenshot capture, visual inspection, and functional assertion results **separately**
-- Reproduced errors, fixes/re-checks, remaining limitations, and next action
+## 4. Record
+Only if the user asks, propose rows for the DEFENSE "understanding check" table. Never mark a question as understood before the user has answered it. Keep at most 3 important questions open.
