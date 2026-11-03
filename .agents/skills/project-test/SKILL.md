@@ -1,67 +1,42 @@
 ---
-name: ui-verify
-description: Verify a running web application's rendered UI using Playwright screenshots, critical user-flow assertions, and browser error checks. Use after UI implementation or changes; not for data-only tasks or general server setup.
+name: project-test
+description: Independently verify the whole project against the official task statement and docs/PLAN.md using executable checks, changed-input runs, failure injection, and a secrets scan. Use for mid-phase or final QA; for rendered-UI checks use ui-verify instead.
 ---
 
-# UI Verify
+# Project Test
 
 ## Goal
-Verify that the **actual running application** renders correctly and meets relevant UI acceptance criteria. A screenshot alone does not prove functional correctness. Prefer focused, repeatable checks over large test suites.
+Decide, from **actual execution evidence**, whether each requirement is met. Do not trust any AI completion report, including your own. Report `PASS / FAIL / NOT VERIFIED` per requirement.
 
-## 1. Select scope and evidence
-1. Prioritize the official task README and root `AGENTS.md`.
-2. Read only relevant requirements (`R-ID`) in `docs/PLAN.md` and status (`T-ID`) in `docs/PROGRESS.md`, if present.
-3. Identify the target route, expected page state, critical user interaction, and applicable error/empty state.
-4. Never invent UI requirements, URLs, credentials, outcomes, or file paths.
+## 1. Scope
+1. Read the official task statement first, then `AGENTS.md`, `docs/PLAN.md` (R-ID, acceptance criteria, "verification method", forbidden/pitfall items) and `docs/PROGRESS.md`.
+2. Build a checklist of every required R-ID, plus every required submission file or config the task statement lists. Never invent requirements.
+3. Never modify existing source code, PLAN, QUESTION, or DEFENSE. Adding new checker scripts or tests is allowed, only as new files in the project's test location. Record results only in `docs/PROGRESS.md` (Test columns).
 
-## 2. Inspect the runtime
-1. Detect the existing framework, test runner, Playwright availability, browser binaries, and actual server address/port.
-2. Prefer **already installed** Playwright packages, browsers, tests, and configuration.
-3. If the server is not running, use the **documented existing startup command** only if permitted. Keep the server running in its own terminal; do not build a separate server-management system.
-4. Before a new dependency, large browser download, or substantial configuration change, explain the cost and seek approval.
-5. If Playwright/browser execution is blocked, **do not bypass restrictions**. Use the permitted in-environment Browser preview and manual checks where feasible; explicitly mark Playwright screenshot verification **not completed**.
+## 2. Verify rules with executable checks
+1. For each rule in the task statement (limits, deadlines, capacity, uniqueness, coverage, etc.), look for an existing independent checker. If none exists, write a small standalone script or test that reads the **produced output** and prints PASS/FAIL per rule. It must not import the implementation's own decision logic.
+2. Run it on real output. Also run it on a deliberately broken sample to prove the checker can fail.
+3. Check forbidden/pitfall items listed in PLAN directly (for example, a rule that must not be shortcut).
 
-## 3. Capture and verify the real page
-For each prioritized `R-ID` / `T-ID`:
-1. Open the **running app**, not a mock/static replacement, in a real Playwright browser session within the provided workspace.
-2. Wait for a meaningful page element or ready state using Playwright locators/auto-retrying assertions. Do not rely on fixed sleeps or `networkidle` alone.
-3. Capture a PNG **after the page has rendered**. For a flow with meaningful state change, also capture the post-interaction UI.
-4. Save to `artifacts/ui-verify/` unless the official task specifies another output directory. Use names like `R-01-main.png`, `R-02-after-submit.png`.
-5. Confirm screenshot files exist and are nonempty. If image inspection is supported, inspect for blank/clipped UI, obstructing overlays, and layout issues. If not, say **captured but not visually inspected**.
-6. Verify the critical flow using actual actions and assertions: visible content, navigation, form submission, and relevant error states. Inspect console/page errors and failed requests; distinguish intentional error tests from defects.
-7. Use existing test conventions. A snapshot comparison (`toHaveScreenshot`) is optional and is valid only with a trustworthy baseline in a comparable environment.
+## 3. Change the input and rerun
+1. Change an input the task says can change (data values, operator-set parameters, selected range) and regenerate.
+2. Confirm the result changes correctly and is not hard-coded, cached from the previous input, or accidentally identical.
+3. Check parameter defaults are not baked into code: change each operator-adjustable value and confirm the output follows.
+4. Check date/time and direction/unit boundaries (midnight crossing, asymmetric values, inclusive/exclusive ends) where the task involves them.
 
-A minimal Playwright example (replace the placeholder with the **actual** requirement):
+## 4. Failure and boundary behavior
+1. Invalid or missing input: the user sees a specific message; existing data and displayed results stay unchanged.
+2. Empty input, repeated or overlapping requests, slow or failed dependencies, failure while saving: no half-written state, no stale result presented as current.
+3. Restart the service and confirm persisted state survives, when persistence is required.
+4. Where a role/permission model exists, confirm each role can and cannot do what the task says.
 
-```js
-await expect(page.getByRole('heading', { name: 'EXPECTED_TITLE' })).toBeVisible();
-await page.screenshot({ path: 'artifacts/ui-verify/R-01-main.png', fullPage: true });
-```
+## 5. Submission and security
+1. Start the service following only the documented steps, without editing source. Report anything undocumented that was needed.
+2. Scan source, config, and Git history (`git log -p`, `git grep`) for secrets. Credentials must come from runtime environment variables only.
+3. Compare produced files against the task's required deliverables list (names, formats, locations).
 
-## 4. Diagnose and re-check failures
-1. Record **expected vs. observed** behavior and a reproducible check.
-2. Fix only within the approved scope. Ask before major architecture or requirement changes.
-3. Re-run the **same failing check**, plus a minimal related smoke test.
-4. Capture a new screenshot if the UI changed.
-5. Never weaken assertions, delete tests, or mark a failed requirement complete merely to produce a passing result.
+## 6. Independent observation
+Confirm at least one core result by a means other than the app's own report: curl or direct file read, a browser check, or recomputing one value by hand. For rendered UI screenshots use `ui-verify`.
 
-## 5. Record evidence with minimal documentation
-- Update `docs/PROGRESS.md` only for meaningful test, defect, fix, or re-verification events, using its existing structure.
-- Connect `R-ID` / `T-ID` to the **actual test command, result, screenshot path, remaining problem, and re-test outcome**.
-- Add important mechanisms or risks to `docs/DEFENSE.md` only when useful for understanding the submitted implementation.
-- Do not create extra management Markdown files or duplicate long logs.
-
-## 6. Safety, scope, and time
-- Use only permitted in-workspace tools and URLs. Never export screenshots/task data, Git Push, or bypass exam restrictions.
-- Do not capture passwords, API keys, private data, or other secrets; use safe test fixtures.
-- Do not overwrite the official README or alter required submission structure to accommodate testing.
-- Prioritize **one rendered screenshot + core user flow + significant failure state**. Expand only for required acceptance criteria or available time.
-- Distinguish **passed**, **failed**, **untested**, and **blocked**. A screenshot created without image inspection or a flow assertion is not a full UI pass.
-
-## Final report
-Report briefly:
-- `R-ID` / `T-ID` and tested route(s)
-- Executed command and browser/tool
-- Screenshot path(s)
-- Screenshot capture, visual inspection, and functional assertion results **separately**
-- Reproduced errors, fixes/re-checks, remaining limitations, and next action
+## Report
+For each R-ID: verdict, command or action, observed result, evidence location. For each FAIL: expected vs. observed and a reproduction. Separate verified facts from inference. After Dev fixes a FAIL, rerun the same check, and keep the failure and fix history.
