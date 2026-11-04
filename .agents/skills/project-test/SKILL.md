@@ -1,6 +1,6 @@
 ---
 name: project-test
-description: Independently verify the whole project against the official task statement and docs/PLAN.md using executable checks, changed-input runs, failure injection, and a secrets scan. Use for mid-phase or final QA; for rendered-UI checks use ui-verify instead.
+description: Independently verify the whole project against the official task statement and docs/PLAN.md using executable checks, changed-input runs, failure injection, and a secrets scan. Use for mid-project or final QA; for rendered-UI checks use ui-verify instead.
 ---
 
 # Project Test
